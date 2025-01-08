@@ -153,7 +153,7 @@ open class ToastView: UIView {
 
   public init() {
     super.init(frame: .zero)
-    self.isUserInteractionEnabled = false
+    self.isUserInteractionEnabled = true
     self.addSubview(self.backgroundView)
     self.addSubview(self.textLabel)
   }
