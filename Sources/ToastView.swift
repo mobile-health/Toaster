@@ -14,6 +14,12 @@ open class ToastView: UIView {
     set { self.textLabel.attributedText = newValue }
   }
   
+  open var image: UIImage? {
+    didSet {
+      self.imageView.image = image
+      self.setNeedsLayout()
+    }
+  }
 
   // MARK: Appearance
 
@@ -147,6 +153,12 @@ open class ToastView: UIView {
     self.textAlignment = .left
     return self
   }()
+  
+  private let imageView: UIImageView = {
+    let `self` = UIImageView()
+    self.contentMode = .scaleAspectFit
+    return self
+  }()
 
 
   // MARK: Initializing
@@ -155,7 +167,9 @@ open class ToastView: UIView {
     super.init(frame: .zero)
     self.isUserInteractionEnabled = true
     self.addSubview(self.backgroundView)
+    self.addSubview(self.imageView)
     self.addSubview(self.textLabel)
+    self.isExclusiveTouch = true // Prevent interaction with superview
   }
 
   required convenience public init?(coder aDecoder: NSCoder) {
@@ -168,22 +182,34 @@ open class ToastView: UIView {
   override open func layoutSubviews() {
     super.layoutSubviews()
     let containerSize = ToastWindow.shared.frame.size
+    let maxWidth = containerSize.width * self.maxWidthRatio
     let constraintSize = CGSize(
-      width: containerSize.width * maxWidthRatio - self.textInsets.left - self.textInsets.right,
+      width: maxWidth - self.textInsets.left - self.textInsets.right - (self.imageView.image != nil ? 32 : 0),
       height: CGFloat.greatestFiniteMagnitude
     )
     let textLabelSize = self.textLabel.sizeThatFits(constraintSize)
+    let imageViewSize = self.imageView.image != nil ? CGSize(width: 24, height: 24) : .zero
+
+    let totalWidth = min(maxWidth, containerSize.width - 32) - self.textInsets.left - self.textInsets.right
+    let totalHeight = max(textLabelSize.height, imageViewSize.height)
+
     self.textLabel.frame = CGRect(
-      x: self.textInsets.left,
-      y: self.textInsets.top,
-      width: textLabelSize.width,
+      x: self.textInsets.left + imageViewSize.width + (imageViewSize.width > 0 ? 8 : 0),
+      y: self.textInsets.top + (totalHeight - textLabelSize.height) / 2,
+      width: min(textLabelSize.width, totalWidth - imageViewSize.width - (imageViewSize.width > 0 ? 8 : 0)),
       height: textLabelSize.height
+    )
+    self.imageView.frame = CGRect(
+      x: self.textInsets.left,
+      y: self.textInsets.top + (totalHeight - imageViewSize.height) / 2,
+      width: imageViewSize.width,
+      height: imageViewSize.height
     )
     self.backgroundView.frame = CGRect(
       x: 0,
       y: 0,
-      width: self.textLabel.frame.size.width + self.textInsets.left + self.textInsets.right,
-      height: self.textLabel.frame.size.height + self.textInsets.top + self.textInsets.bottom
+      width: totalWidth + self.textInsets.left + self.textInsets.right,
+      height: totalHeight + self.textInsets.top + self.textInsets.bottom
     )
 
     var x: CGFloat
@@ -192,7 +218,7 @@ open class ToastView: UIView {
     var height: CGFloat
 
     let orientation = UIApplication.shared.statusBarOrientation
-    if orientation.isPortrait || !ToastWindow.shared.shouldRotateManually {
+    if (orientation.isPortrait || !ToastWindow.shared.shouldRotateManually) {
       width = containerSize.width
       height = containerSize.height
       y = self.bottomOffsetPortrait
@@ -206,7 +232,7 @@ open class ToastView: UIView {
     }
 
     let backgroundViewSize = self.backgroundView.frame.size
-    x = (width - backgroundViewSize.width) * 0.5
+    x = (containerSize.width - backgroundViewSize.width) / 2 // Center horizontally with padding
     y = height - (backgroundViewSize.height + y)
     self.frame = CGRect(
       x: x,
@@ -217,14 +243,16 @@ open class ToastView: UIView {
   }
 
   override open func hitTest(_ point: CGPoint, with event: UIEvent!) -> UIView? {
-    if let superview = self.superview {
-      let pointInWindow = self.convert(point, to: superview)
-      let contains = self.frame.contains(pointInWindow)
-      if contains && self.isUserInteractionEnabled {
-        return self
-      }
+    /*
+    if self.point(inside: point, with: event) {
+      return self
     }
+    */
     return nil
+  }
+
+  override open func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    return self.bounds.contains(point)
   }
 
 }
