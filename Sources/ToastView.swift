@@ -243,11 +243,9 @@ open class ToastView: UIView {
   }
 
   override open func hitTest(_ point: CGPoint, with event: UIEvent!) -> UIView? {
-    /*
     if self.point(inside: point, with: event) {
       return self
     }
-    */
     return nil
   }
 

@@ -148,6 +148,16 @@ open class ToastWindow: UIWindow {
     mainWindow?.makeKey()
   }
   
+  open override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    for subview in self.subviews.reversed() {
+      let convertedPoint = subview.convert(point, from: self)
+      if let hitView = subview.hitTest(convertedPoint, with: event) {
+        return hitView
+      }
+    }
+    return nil
+  }
+  
   
   // MARK: - Private method
 
