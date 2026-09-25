@@ -22,6 +22,11 @@ open class Toast: Operation {
     set { self.view.attributedText = newValue }
   }
 
+  @objc public var image: UIImage? {
+    get { return self.view.image }
+    set { self.view.image = newValue }
+  }
+
   @objc public var delay: TimeInterval
   @objc public var duration: TimeInterval
 
@@ -59,38 +64,21 @@ open class Toast: Operation {
 
   /// Initializer.
   /// Instantiates `self.view`, so must be called on main thread.
-  @objc public init(text: String?, delay: TimeInterval = 0, duration: TimeInterval = Delay.short) {
+  @objc public init(text: String?, image: UIImage? = nil, delay: TimeInterval = 0, duration: TimeInterval = Delay.short) {
     self.delay = delay
     self.duration = duration
     super.init()
     self.text = text
+    self.image = image
   }
 
-  @objc public init(attributedText: NSAttributedString?, delay: TimeInterval = 0, duration: TimeInterval = Delay.short) {
+  @objc public init(attributedText: NSAttributedString?, image: UIImage? = nil, delay: TimeInterval = 0, duration: TimeInterval = Delay.short) {
     self.delay = delay
     self.duration = duration
     super.init()
     self.attributedText = attributedText
+    self.image = image
   }
-  
-
-  // MARK: Factory (Deprecated)
-
-  @available(*, deprecated, message: "Use 'init(text:)' instead.")
-  public class func makeText(_ text: String) -> Toast {
-    return Toast(text: text)
-  }
-
-  @available(*, deprecated, message: "Use 'init(text:duration:)' instead.")
-  public class func makeText(_ text: String, duration: TimeInterval) -> Toast {
-    return Toast(text: text, duration: duration)
-  }
-
-  @available(*, deprecated, message: "Use 'init(text:delay:duration:)' instead.")
-  public class func makeText(_ text: String?, delay: TimeInterval, duration: TimeInterval) -> Toast {
-    return Toast(text: text, delay: delay, duration: duration)
-  }
-
 
   // MARK: Showing
 
