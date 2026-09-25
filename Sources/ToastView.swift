@@ -150,7 +150,7 @@ open class ToastView: UIView {
       }
     }()
     self.numberOfLines = 0
-    self.textAlignment = .left
+    self.textAlignment = .center
     return self
   }()
   
@@ -181,29 +181,39 @@ open class ToastView: UIView {
 
   override open func layoutSubviews() {
     super.layoutSubviews()
-    let containerSize = ToastWindow.shared.frame.size
-    let maxWidth = containerSize.width * self.maxWidthRatio
+
+    let containerWidth = self.superview?.bounds.width
+      ?? self.window?.bounds.width
+      ?? ToastWindow.shared.frame.width
+    let containerHeight = self.superview?.bounds.height
+      ?? self.window?.bounds.height
+      ?? ToastWindow.shared.frame.height
+    guard containerWidth > 0, containerHeight > 0 else { return }
+
+    let maxWidth = min(containerWidth * self.maxWidthRatio, containerWidth - 32)
+    let imageViewSize = self.imageView.image != nil ? CGSize(width: 24, height: 24) : .zero
+    let imageSpacing: CGFloat = imageViewSize.width > 0 ? 8 : 0
     let constraintSize = CGSize(
-      width: maxWidth - self.textInsets.left - self.textInsets.right - (self.imageView.image != nil ? 32 : 0),
+      width: max(0, maxWidth - self.textInsets.left - self.textInsets.right - imageViewSize.width - imageSpacing),
       height: CGFloat.greatestFiniteMagnitude
     )
     let textLabelSize = self.textLabel.sizeThatFits(constraintSize)
-    let imageViewSize = self.imageView.image != nil ? CGSize(width: 24, height: 24) : .zero
-
-    let totalWidth = min(maxWidth, containerSize.width - 32) - self.textInsets.left - self.textInsets.right
+    let contentWidth = imageViewSize.width + imageSpacing + textLabelSize.width
+    let totalWidth = min(maxWidth - self.textInsets.left - self.textInsets.right, contentWidth)
     let totalHeight = max(textLabelSize.height, imageViewSize.height)
 
-    self.textLabel.frame = CGRect(
-      x: self.textInsets.left + imageViewSize.width + (imageViewSize.width > 0 ? 8 : 0),
-      y: self.textInsets.top + (totalHeight - textLabelSize.height) / 2,
-      width: min(textLabelSize.width, totalWidth - imageViewSize.width - (imageViewSize.width > 0 ? 8 : 0)),
-      height: textLabelSize.height
-    )
+    self.textLabel.textAlignment = imageViewSize.width > 0 ? .left : .center
     self.imageView.frame = CGRect(
       x: self.textInsets.left,
       y: self.textInsets.top + (totalHeight - imageViewSize.height) / 2,
       width: imageViewSize.width,
       height: imageViewSize.height
+    )
+    self.textLabel.frame = CGRect(
+      x: self.textInsets.left + imageViewSize.width + imageSpacing,
+      y: self.textInsets.top + (totalHeight - textLabelSize.height) / 2,
+      width: min(textLabelSize.width, max(0, totalWidth - imageViewSize.width - imageSpacing)),
+      height: textLabelSize.height
     )
     self.backgroundView.frame = CGRect(
       x: 0,
@@ -212,28 +222,19 @@ open class ToastView: UIView {
       height: totalHeight + self.textInsets.top + self.textInsets.bottom
     )
 
-    var x: CGFloat
-    var y: CGFloat
-    var width: CGFloat
-    var height: CGFloat
-
-    let orientation = UIApplication.shared.statusBarOrientation
-    if (orientation.isPortrait || !ToastWindow.shared.shouldRotateManually) {
-      width = containerSize.width
-      height = containerSize.height
-      y = self.bottomOffsetPortrait
-    } else {
-      width = containerSize.height
-      height = containerSize.width
-      y = self.bottomOffsetLandscape
-    }
+    // Superview (key window) already matches interface orientation.
+    // Do not swap width/height from statusBarOrientation — that places the toast mid-screen.
+    let isPortrait = containerHeight >= containerWidth
+    var bottomOffset = isPortrait ? self.bottomOffsetPortrait : self.bottomOffsetLandscape
     if #available(iOS 11.0, *), useSafeAreaForBottomOffset {
-      y += ToastWindow.shared.safeAreaInsets.bottom
+      bottomOffset += self.superview?.safeAreaInsets.bottom
+        ?? self.window?.safeAreaInsets.bottom
+        ?? ToastWindow.shared.safeAreaInsets.bottom
     }
 
     let backgroundViewSize = self.backgroundView.frame.size
-    x = (containerSize.width - backgroundViewSize.width) / 2 // Center horizontally with padding
-    y = height - (backgroundViewSize.height + y)
+    let x = (containerWidth - backgroundViewSize.width) / 2
+    let y = containerHeight - backgroundViewSize.height - bottomOffset
     self.frame = CGRect(
       x: x,
       y: y,
